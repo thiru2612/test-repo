@@ -13,16 +13,18 @@ jobs:
   codex-reviewed-validation:
     name: codex reviewed status validation
     runs-on: ubuntu-latest
-    # if: github.event.label.name == 'good first issue'
+    if: github.event.label.name == 'good first issue'
     steps:
       - name: Verify sender
         uses: actions/github-script@v7
         with:
           script: |
-            const isCorrectLabel = context.payload.label.name === "good first issue";
-            const isCorrectSender = context.payload.sender.login === "thiru2612";
+            # if (context.payload.label.name !== "good first issue") {
+            #   core.setFailed("Label is not 'good first issue'");
+            #   return;
+            # }
 
-            if (!isCorrectLabel || !isCorrectSender) {
-              core.setFailed(`Check failed — label: ${isCorrectLabel}, sender: ${isCorrectSender}`);
+            if (context.payload.sender.login !== "thiru") {
+              core.setFailed("Sender is not thiru");
+              return;
             }
-
