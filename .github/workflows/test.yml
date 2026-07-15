@@ -30,11 +30,7 @@ jobs:
             const repo = context.repo.repo;
             const pull_number = context.payload.pull_request.number;
 
-            // Current labels on the PR
-            # let labels = context.payload.pull_request.labels.map(l => l.name);
-
-            // Case 1:
-            // Someone other than thiru2612 added the "good" label
+            // Someone other than thiru2612 added the good label
             if (
               action === "labeled" &&
               eventLabel === GOOD_LABEL &&
@@ -53,15 +49,15 @@ jobs:
               return;
             }
 
-            // Refresh labels in case anything changed
+            // Get the latest labels from GitHub
             const { data: issue } = await github.rest.issues.get({
               owner,
               repo,
               issue_number: pull_number
             });
 
-            let labels = issue.labels.map(l =>
-              typeof l === "string" ? l : l.name
+            const labels = issue.labels.map(label =>
+              typeof label === "string" ? label : label.name
             );
 
             // Final state
