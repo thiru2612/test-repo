@@ -20,7 +20,7 @@ jobs:
         with:
           script: |
             const GOOD_LABEL = "good first issue";
-            const AUTHORIZED_USER = "thiru2612";
+            const AUTHORIZED_USER = "thiru";
 
             const action = context.payload.action;
             const sender = context.payload.sender.login;
