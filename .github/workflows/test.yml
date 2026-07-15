@@ -3,29 +3,72 @@ name: Manual Codex Review
 on:
   pull_request:
     types:
-      - labeled # - triggered by label being added (works for all branch)
+      - labeled
+      - unlabeled
 
 permissions:
-  issues: write
   pull-requests: write
 
 jobs:
   codex-reviewed-validation:
     name: codex reviewed status validation
     runs-on: ubuntu-latest
-    # if: github.event.label.name == 'good first issue'
+
     steps:
-      - uses: actions/github-script@v7
+      - name: Validate good label
+        uses: actions/github-script@v7
         with:
           script: |
-            const labels = context.payload.pull_request.labels.map(l => l.name);
+            const GOOD_LABEL = "good first issue";
+            const AUTHORIZED_USER = "thiru2612";
 
-            if (!labels.includes("good first issue")) {
-              core.setFailed("PR is missing the 'good first issue' label.");
+            const action = context.payload.action;
+            const sender = context.payload.sender.login;
+            const eventLabel = context.payload.label?.name;
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pull_number = context.payload.pull_request.number;
+
+            // Current labels on the PR
+            # let labels = context.payload.pull_request.labels.map(l => l.name);
+
+            // Case 1:
+            // Someone other than thiru2612 added the "good" label
+            if (
+              action === "labeled" &&
+              eventLabel === GOOD_LABEL &&
+              sender !== AUTHORIZED_USER
+            ) {
+              await github.rest.issues.removeLabel({
+                owner,
+                repo,
+                issue_number: pull_number,
+                name: GOOD_LABEL
+              });
+
+              core.setFailed(
+                `Only ${AUTHORIZED_USER} can add the '${GOOD_LABEL}' label. ${sender} is not authorized.`
+              );
               return;
             }
 
-            if (context.payload.sender.login !== "thiru2612") {
-              core.setFailed("Only thiru2612 may add/remove this label.");
-              return;
+            // Refresh labels in case anything changed
+            const { data: issue } = await github.rest.issues.get({
+              owner,
+              repo,
+              issue_number: pull_number
+            });
+
+            let labels = issue.labels.map(l =>
+              typeof l === "string" ? l : l.name
+            );
+
+            // Final state
+            if (labels.includes(GOOD_LABEL)) {
+              console.log("PR is approved.");
+            } else {
+              core.setFailed(
+                `PR is not approved. Missing '${GOOD_LABEL}' label.`
+              );
             }
