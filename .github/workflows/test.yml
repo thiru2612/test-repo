@@ -18,13 +18,18 @@ jobs:
       - name: Verify sender
         uses: actions/github-script@v7
         with:
+              steps:
+      - uses: actions/github-script@v7
+        with:
           script: |
-            # if (context.payload.label.name !== "good first issue") {
-            #   core.setFailed("Label is not 'good first issue'");
-            #   return;
-            # }
+            const labels = context.payload.pull_request.labels.map(l => l.name);
 
-            if (context.payload.sender.login !== "thiru") {
-              core.setFailed("Sender is not thiru");
+            if (!labels.includes("good first issue")) {
+              core.setFailed("PR is missing the 'good first issue' label.");
+              return;
+            }
+
+            if (context.payload.sender.login !== "thiru2612") {
+              core.setFailed("Only thiru2612 may add/remove this label.");
               return;
             }
