@@ -15,10 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     # if: github.event.label.name == 'good first issue'
     steps:
-      - name: Verify sender
-        uses: actions/github-script@v7
-        with:
-              steps:
       - uses: actions/github-script@v7
         with:
           script: |
