@@ -32,3 +32,5 @@ if (found !== whitelist.length) {
 }
 
 console.log("✅ PR satisfies label validation.");
+
+hello
