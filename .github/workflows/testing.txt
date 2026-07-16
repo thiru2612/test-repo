@@ -1,0 +1,34 @@
+const labelSet = new Set(labels);
+
+const whitelist = [
+  "good first issue",
+  "codex-reviewed"
+];
+
+const blacklist = new Set([
+  "do-not-merge"
+]);
+
+// Blacklist check
+for (const label of blacklist) {
+  if (labelSet.has(label)) {
+    core.setFailed("PR is Black listed.");
+    return;
+  }
+}
+
+// Whitelist check
+let found = 0;
+
+for (const label of whitelist) {
+  if (labelSet.has(label)) {
+    found++;
+  }
+}
+
+if (found !== whitelist.length) {
+  core.setFailed("PR is missing one or more required labels.");
+  return;
+}
+
+console.log("✅ PR satisfies label validation.");
