@@ -1,16 +1,11 @@
 name: Codex Review validate
 
 on:
-  workflow_run:
-    workflows:
-      - "add codex-reviewed yml"
-    types:
-      - completed
-
-  pull_request:
-    types:
-      - labeled
-      - unlabeled
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        required: true
+        type: string
 
 permissions:
   pull-requests: read
@@ -33,94 +28,60 @@ jobs:
               "codex-reviewed",
               "ready-to-merge"
             ]);
-
+            
             const blacklist = new Set([
               "do-not-merge",
-              "somthing-wrong"
+              "something-wrong"
             ]);
-            let pull_number;
-
+            
+            const pull_number = context.payload.inputs["pr-number"];
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-
-            // -----------------------------
-            // Determine the PR number
-            // -----------------------------
-            if (
-              context.eventName === "pull_request" &&
-              context.payload.action === "labeled" &&
-            ){
             
-              if (blacklist.has(context.payload.label?.name)) {
-                console.log("Triggered by labeled event.");
-                core.setFailed("Added blacklist label ${context.payload.label?.name}. PR should not merge");
-                return;
+            //if(state === "fail") {
+              //core.setFailed(`PR is not approved.Reason: ${message}`);
+              //return;
+            //}
+            //else{        
+              // ==========================================================
+              // Fetch latest PR
+              // ==========================================================
+  
+              const { data: pr } = await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number
+              });
+  
+              const labels = pr.labels.map(label => label.name);
+              const labelSet = new Set(labels);
+  
+              console.log(`PR #${pull_number}`);
+              console.log(`Current Labels: ${labels.join(", ")}`);
+  
+              // ==========================================================
+              // Blacklist Validation
+              // ==========================================================
+  
+              for (const label of blacklist) {
+                if (labelSet.has(label)) {
+                  core.setFailed("PR contains one or more blacklisted labels.");
+                  return;
+                }
               }
-              else if (context.payload.label?.name === "validate-check"){        
-                console.log("Triggered by pull_request");
-                pull_number = context.payload.pull_request.number;
+              
+  
+              // ==========================================================
+              // Whitelist Validation
+              // All required labels must exist
+              // ==========================================================
+  
+              for (const label of whitelist) {
+                if (!labelSet.has(label)) {
+                  core.setFailed(`Missing required label '${label}'.`);
+                  return;
+                }
               }
-            }
             
-            else if (
-              context.eventName === "pull_request" && 
-              context.payload.action === "unlabeled" && 
-              whitelist.has(context.payload.label?.name)
-            ){
-              console.log("Triggered by unlabeled event.");
-              core.setFailed("Removed whitelist label.Missing whitelist label.");
-              return;
-            }
-            else if (context.eventName === "workflow_run") {
-
-              console.log("Triggered by workflow_run");
-
-              if (context.payload.workflow_run.conclusion !== "success") {
-                core.setFailed("Previous workflow failed.");
-                return;
-              }
-
-              const prs = context.payload.workflow_run.pull_requests;
-
-              if (prs.length === 0) {
-                core.setFailed("No pull request associated with this workflow.");
-                return;
-              }
-
-              pull_number = prs[0].number;
-
-            } else {
-              console.log("Ignoring this event.");
-              core.setFailed("No valid event found to determine the pull request number. the event is ${JSON.stringify(prs)}");
-              return;
-            }
-
-            // -----------------------------
-            // Fetch latest PR
-            // -----------------------------
-            const { data: pr } = await github.rest.pulls.get({
-              owner,
-              repo,
-              pull_number
-            });
-
-            const labels = pr.labels.map(label => label.name);
-            const labelSet = new Set(labels);
-
-            console.log(`PR #${pull_number}`);
-            console.log(`Labels: ${labels.join(", ")}`);
-
-
-            // Blacklist check
-            if (blacklist.some(label => labelSet.has(label))) {
-              core.setFailed("PR is Black listed.");
-              return;
-            }
-
-            // Whitelist check
-            if (!whitelist.every(label => labelSet.has(label))) {
-              core.setFailed("PR is missing one or more required labels.");
-              return;
-            }
-
-            console.log("✅ PR satisfies label validation.");
+              console.log("✅ PR satisfies all label validation rules.");
+            //}
