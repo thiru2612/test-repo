@@ -1,0 +1,87 @@
+name: Codex Review validate
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        required: true
+        type: string
+
+permissions:
+  pull-requests: read
+
+jobs:
+  codex-reviewed-validation:
+    name: codex reviewed status validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate existing labels
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // -----------------------------
+            // Required labels
+            // -----------------------------
+            const whitelist = new Set([
+              "codex-reviewed",
+              "ready-to-merge"
+            ]);
+            
+            const blacklist = new Set([
+              "do-not-merge",
+              "something-wrong"
+            ]);
+            
+            const pull_number = context.payload.inputs["pr-number"];
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            //if(state === "fail") {
+              //core.setFailed(`PR is not approved.Reason: ${message}`);
+              //return;
+            //}
+            //else{        
+              // ==========================================================
+              // Fetch latest PR
+              // ==========================================================
+  
+              const { data: pr } = await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number
+              });
+  
+              const labels = pr.labels.map(label => label.name);
+              const labelSet = new Set(labels);
+  
+              console.log(`PR #${pull_number}`);
+              console.log(`Current Labels: ${labels.join(", ")}`);
+  
+              // ==========================================================
+              // Blacklist Validation
+              // ==========================================================
+  
+              for (const label of blacklist) {
+                if (labelSet.has(label)) {
+                  core.setFailed("PR contains one or more blacklisted labels.");
+                  return;
+                }
+              }
+              
+  
+              // ==========================================================
+              // Whitelist Validation
+              // All required labels must exist
+              // ==========================================================
+  
+              for (const label of whitelist) {
+                if (!labelSet.has(label)) {
+                  core.setFailed(`Missing required label '${label}'.`);
+                  return;
+                }
+              }
+            
+              console.log("✅ PR satisfies all label validation rules.");
+            //}
